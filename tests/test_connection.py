@@ -8,7 +8,7 @@ import sys
 
 import paramiko
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
@@ -41,7 +41,7 @@ def main():
         transport.connect(username=username, password=config.get("sftp", "password"))
         sftp_client = paramiko.SFTPClient.from_transport(transport)
 
-        print("✓ Connexion SSH établie.")
+        print("OK Connexion SSH établie.")
 
         print(f"\nContenu du répertoire distant '{remote_dir}' :")
         items = sftp_client.listdir_attr(remote_dir)
@@ -56,11 +56,11 @@ def main():
 
         sftp_client.close()
         transport.close()
-        print("\n✓ TEST RÉUSSI - Connexion SFTP fonctionnelle.")
+        print("\nOK TEST REUSSI - Connexion SFTP fonctionnelle.")
         return 0
 
     except Exception as exc:
-        print(f"\n✗ ÉCHEC DE CONNEXION : {exc}")
+        print(f"\nERREUR Echec de connexion : {exc}")
         print("\nVérifiez :")
         print("  1. Hôte et port corrects")
         print("  2. Identifiants corrects")

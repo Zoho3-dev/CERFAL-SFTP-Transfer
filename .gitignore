@@ -16,6 +16,16 @@ venv/
 
 # Logs
 *.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+*~
 
 # Sensitive configuration (use config.example.ini as template)
 config.ini
+config_test.ini
+
+# Optional: Windows Service scripts (use task scheduler instead)
+# scripts/

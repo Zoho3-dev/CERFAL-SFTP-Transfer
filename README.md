@@ -20,19 +20,25 @@ Surveille un répertoire local, détecte les nouveaux fichiers et les transfère
 
 ```
 sftp_service/
-├── run_standalone.py       # Point d'entrée principal (standalone / tâche planifiée)
-├── service.py              # Wrapper service Windows (pywin32)
+├── run_standalone.py       # Point d'entrée principal (tâche planifiée)
 ├── sftp_transfer.py        # Client SFTP (upload + vérification)
 ├── file_watcher.py         # Surveillance répertoire + retry
 ├── alert_manager.py        # Alertes email (SMTP / SMTP_SSL)
 ├── log_setup.py            # Configuration logging rotatif
-├── test_connection.py      # Test de connexion rapide
-├── config.ini              # Configuration (non versionné)
-├── config.example.ini      # Template de configuration
-├── install_service.bat     # Installation service Windows
-├── uninstall_service.bat   # Désinstallation service Windows
+├── config.ini              # Configuration production (non versionné)
+├── config.example.ini      # Template configuration
 ├── requirements.txt        # Dépendances Python
-└── .gitignore
+├── run_tests.py            # Lanceur de tests
+├── tests/                  # Tests unitaires
+│   ├── test_connection.py  # Test connexion SFTP
+│   └── test_alert_sftp.py  # Test alertes email
+├── scripts/                # Scripts Windows Service (optionnel)
+│   ├── service.py          # Code service Windows
+│   ├── install_service.bat # Installation service
+│   ├── uninstall_service.bat # Désinstallation service
+│   └── README.md            # Documentation scripts
+├── .gitignore              # Fichiers ignorés
+└── README.md               # Documentation principale
 ```
 
 **Flux de données :**

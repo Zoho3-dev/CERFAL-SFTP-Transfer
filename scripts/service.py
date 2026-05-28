@@ -92,7 +92,7 @@ class SFTPTransferService(win32serviceutil.ServiceFramework):
                 "Le service va continuer et retenter les connexions.",
             )
 
-        alert_mgr.send_service_start_alert()
+        # alert_mgr.send_service_start_alert()  # Désactivé - emails uniquement en cas d'alerte
 
         self.watcher = FileWatcher(
             source_directory=config.get("watch", "source_directory"),
@@ -107,7 +107,7 @@ class SFTPTransferService(win32serviceutil.ServiceFramework):
 
         self.watcher.start()
 
-        alert_mgr.send_service_stop_alert()
+        # alert_mgr.send_service_stop_alert()  # Désactivé - emails uniquement en cas d'alerte
         self.logger.info("Service terminé proprement.")
 
 

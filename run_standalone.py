@@ -113,9 +113,9 @@ def main():
     signal.signal(signal.SIGINT, on_sigint)
     signal.signal(signal.SIGTERM, on_sigint)
 
-    alert_mgr.send_service_start_alert()
+    # alert_mgr.send_service_start_alert()  # Désactivé - emails uniquement en cas d'alerte
     watcher.start()
-    alert_mgr.send_service_stop_alert()
+    # alert_mgr.send_service_stop_alert()  # Désactivé - emails uniquement en cas d'alerte
     logger.info("Service terminé.")
 
 
