@@ -7,7 +7,6 @@ import shutil
 import time
 from datetime import datetime
 
-from alert_manager import AlertManager
 from sftp_transfer import SFTPTransfer
 
 logger = logging.getLogger("SFTPService")
@@ -23,26 +22,22 @@ class FileWatcher:
         archive_directory: str,
         poll_interval: int,
         sftp: SFTPTransfer,
-        alert_manager: AlertManager,
         max_retries: int = 3,
         retry_delay: int = 60,
     ):
         self.source_directory = source_directory
-        self.file_pattern = file_pattern
+        self.file_pattern = file_pattern.lower()
         self.archive_directory = archive_directory
         self.poll_interval = poll_interval
         self.sftp = sftp
-        self.alert_manager = alert_manager
         self.max_retries = max_retries
         self.retry_delay = retry_delay
-        self._processed_files: set[str] = set()
         self._running = False
 
     def start(self):
         """Start the polling loop."""
         self._running = True
         self._ensure_directories()
-        self._load_already_archived()
 
         logger.info("Surveillance démarrée : %s | Pattern : %s | Intervalle : %ds",
                     self.source_directory, self.file_pattern, self.poll_interval)
@@ -64,16 +59,9 @@ class FileWatcher:
         os.makedirs(self.source_directory, exist_ok=True)
         os.makedirs(self.archive_directory, exist_ok=True)
 
-    def _load_already_archived(self):
-        """Load already-archived filenames to avoid reprocessing."""
-        if not os.path.isdir(self.archive_directory):
-            return
-        for name in os.listdir(self.archive_directory):
-            # Archive format: 20260526_143000_filename.txt
-            parts = name.split("_", 2)
-            original_name = parts[2] if len(parts) >= 3 else name
-            self._processed_files.add(original_name)
-        logger.debug("Fichiers déjà archivés : %d", len(self._processed_files))
+    def _matches_pattern(self, filename: str) -> bool:
+        """Case-insensitive pattern matching (.TXT, .txt, .Txt all match *.txt)."""
+        return fnmatch.fnmatch(filename.lower(), self.file_pattern)
 
     def _scan_and_transfer(self):
         """Scan source directory and transfer new matching files."""
@@ -86,11 +74,9 @@ class FileWatcher:
 
             if not os.path.isfile(filepath):
                 continue
-            if not fnmatch.fnmatch(filename.lower(), self.file_pattern.lower()):
+            if not self._matches_pattern(filename):
                 continue
             if os.path.getsize(filepath) == 0:
-                continue
-            if filename in self._processed_files:
                 continue
             if not self._is_file_stable(filepath):
                 logger.debug("Fichier en cours d'écriture, report : %s", filename)
@@ -118,11 +104,6 @@ class FileWatcher:
                 logger.info("Tentative %d/%d pour %s", attempt, self.max_retries, filename)
                 self.sftp.upload_file(filepath)
                 self._archive_file(filepath, filename)
-                self._processed_files.add(filename)
-
-                if attempt > 1:
-                    self.alert_manager.send_transfer_success_after_retry(filename, attempt)
-
                 logger.info("Fichier traité avec succès : %s", filename)
                 return
 
@@ -136,9 +117,6 @@ class FileWatcher:
 
         logger.critical("ÉCHEC DÉFINITIF pour %s après %d tentatives : %s",
                         filename, self.max_retries, last_error)
-        self.alert_manager.send_transfer_failure_alert(
-            filename, last_error, self.max_retries, self.max_retries
-        )
 
     def _archive_file(self, filepath: str, filename: str):
         """Move file to archive directory with timestamp prefix."""

@@ -12,11 +12,14 @@ import os
 import signal
 import sys
 
-SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+# When frozen (PyInstaller exe), use the exe's directory; otherwise use script dir
+if getattr(sys, 'frozen', False):
+    SCRIPT_DIR = os.path.dirname(sys.executable)
+else:
+    SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
     sys.path.insert(0, SCRIPT_DIR)
 
-from alert_manager import AlertManager
 from file_watcher import FileWatcher
 from log_setup import setup_logging
 from sftp_transfer import SFTPTransfer
@@ -32,7 +35,7 @@ def load_config(path: str) -> configparser.ConfigParser:
     config = configparser.ConfigParser()
     config.read(path, encoding="utf-8")
 
-    required = ["sftp", "watch", "logging", "alerts", "retry"]
+    required = ["sftp", "watch", "logging", "retry"]
     for section in required:
         if not config.has_section(section):
             sys.exit(f"ERREUR : section [{section}] manquante dans {path}")
@@ -41,25 +44,6 @@ def load_config(path: str) -> configparser.ConfigParser:
         sys.exit("ERREUR : mot de passe SFTP non renseigné dans config.ini")
 
     return config
-
-
-def build_alert_manager(config: configparser.ConfigParser) -> AlertManager:
-    """Instantiate AlertManager from config."""
-    return AlertManager(
-        enabled=config.getboolean("alerts", "enabled", fallback=False),
-        smtp_host=config.get("alerts", "smtp_host", fallback=""),
-        smtp_port=config.getint("alerts", "smtp_port", fallback=587),
-        smtp_use_tls=config.getboolean("alerts", "smtp_use_tls", fallback=True),
-        smtp_username=config.get("alerts", "smtp_username", fallback=""),
-        smtp_password=config.get("alerts", "smtp_password", fallback=""),
-        from_email=config.get("alerts", "from_email", fallback=""),
-        to_emails=[
-            e.strip()
-            for e in config.get("alerts", "to_emails", fallback="").split(",")
-            if e.strip()
-        ],
-        subject_prefix=config.get("alerts", "subject_prefix", fallback="[ALERTE SFTP]"),
-    )
 
 
 def build_sftp_client(config: configparser.ConfigParser) -> SFTPTransfer:
@@ -86,7 +70,6 @@ def main():
     logger.info("SERVICE SFTP - Démarrage (standalone)")
     logger.info("=" * 60)
 
-    alert_mgr = build_alert_manager(config)
     sftp = build_sftp_client(config)
 
     logger.info("Test de connexion SFTP...")
@@ -101,7 +84,6 @@ def main():
         archive_directory=config.get("watch", "archive_directory"),
         poll_interval=config.getint("watch", "poll_interval", fallback=30),
         sftp=sftp,
-        alert_manager=alert_mgr,
         max_retries=config.getint("retry", "max_retries", fallback=3),
         retry_delay=config.getint("retry", "retry_delay", fallback=60),
     )
@@ -113,9 +95,7 @@ def main():
     signal.signal(signal.SIGINT, on_sigint)
     signal.signal(signal.SIGTERM, on_sigint)
 
-    # alert_mgr.send_service_start_alert()  # Désactivé - emails uniquement en cas d'alerte
     watcher.start()
-    # alert_mgr.send_service_stop_alert()  # Désactivé - emails uniquement en cas d'alerte
     logger.info("Service terminé.")
 
 
